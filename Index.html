@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Give u8zgz a Break Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        body {
+            background-color: #0f1117;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        h1 {
+            font-size: 26px;
+            color: #5865f2;
+        }
+        .status-container {
+            width: 100%;
+            max-width: 500px;
+            background: #1e2029;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .bar-bg {
+            background: #2b2d38;
+            height: 22px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        #stress-bar { background: linear-gradient(90deg, #f39c12, #e74c3c); }
+        #energy-bar { background: linear-gradient(90deg, #2ecc71, #3498db); }
+        
+        .currency {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #f1c40f;
+            margin-top: 5px;
+        }
+
+        .task-card {
+            width: 100%;
+            max-width: 500px;
+            background: #2b2d38;
+            border-left: 5px solid #e74c3c;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .task-title { font-weight: bold; font-size: 15px; }
+        .task-desc { font-size: 12px; color: #aaa; }
+
+        .controls {
+            width: 100%;
+            max-width: 500px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-mute { background: #34495e; }
+        .btn-coffee { background: #e67e22; }
+        .btn-delegate { background: #9b59b6; }
+        .btn-break { background: #27ae60; grid-column: span 2; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>☕ Give u8zgz a Break</h1>
+        <p style="font-size: 12px; color: #888;">Manage workload and prevent burnout!</p>
+    </header>
+
+    <div class="status-container">
+        <div class="bar-label">
+            <span>Stress Meter</span>
+            <span id="stress-val">0%</span>
+        </div>
+        <div class="bar-bg"><div id="stress-bar" class="bar-fill" style="width: 0%;"></div></div>
+
+        <div class="bar-label">
+            <span>Energy Bar</span>
+            <span id="energy-val">100%</span>
+        </div>
+        <div class="bar-bg"><div id="energy-bar" class="bar-fill" style="width: 100%;"></div></div>
+
+        <div class="currency">Coffee Coins: $<span id="coins">0</span> CC</div>
+    </div>
+
+    <div class="task-card" id="active-task">
+        <div>
+            <div class="task-title" id="task-name">No Active Tasks</div>
+            <div class="task-desc" id="task-sub">u8zgz is resting... for now.</div>
+        </div>
+        <button id="resolve-btn" style="background:#5865f2; display:none;" onclick="resolveTask()">Resolve</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn-mute" onclick="muteNotifications()">Mute Pings (2m)</button>
+        <button class="btn-coffee" onclick="drinkCoffee()">Bring Coffee (+15% E)</button>
+        <button class="btn-delegate" onclick="delegateTask()">Delegate Task</button>
+        <button class="btn-break" id="break-btn" onclick="grantBreak()">Grant Break (Double CC)</button>
+    </div>
+
+    <script>
+        let stress = 0;
+        let energy = 100;
+        let coins = 0;
+        let muted = false;
+
+        const fakeTasks = [
+            "Server Outage Emergency",
+            "Drama in General Chat",
+            "1,000 Unread Ping Notifications",
+            "Spam Attack in Help Desk",
+            "Database Corruption Alert"
+        ];
+
+        function updateStats() {
+            document.getElementById('stress-val').innerText = Math.round(stress) + '%';
+            document.getElementById('stress-bar').style.width = stress + '%';
+            document.getElementById('energy-val').innerText = Math.round(energy) + '%';
+            document.getElementById('energy-bar').style.width = energy + '%';
+            document.getElementById('coins').innerText = coins;
+
+            if (stress >= 100 || energy <= 0) {
+                alert("💥 u8zgz suffered a BURNOUT EVENT! Streak reset!");
+                stress = 0;
+                energy = 100;
+            }
+        }
+
+        setInterval(() => {
+            if (!muted && Math.random() > 0.4) {
+                stress = Math.min(100, stress + 5);
+                energy = Math.max(0, energy - 3);
+                if (Math.random() > 0.5) {
+                    const randomTask = fakeTasks[Math.floor(Math.random() * fakeTasks.length)];
+                    document.getElementById('task-name').innerText = randomTask;
+                    document.getElementById('task-sub').innerText = "Requires immediate attention!";
+                    document.getElementById('resolve-btn').style.display = "block";
+                }
+            }
+            updateStats();
+        }, 3000);
+
+        function resolveTask() {
+            stress = Math.max(0, stress - 10);
+            coins += 15;
+            document.getElementById('task-name').innerText = "No Active Tasks";
+            document.getElementById('task-sub').innerText = "Task resolved successfully.";
+            document.getElementById('resolve-btn').style.display = "none";
+            updateStats();
+        }
+
+        function drinkCoffee() {
+            energy = Math.min(100, energy + 15);
+            updateStats();
+        }
+
+        function muteNotifications() {
+            muted = true;
+            alert("Muted low-priority pings for 2 minutes!");
+            setTimeout(() => { muted = false; }, 120000);
+        }
+
+        function delegateTask() {
+            stress = Math.max(0, stress - 15);
+            coins += 5;
+            updateStats();
+        }
+
+        function grantBreak() {
+            if (stress < 20) {
+                coins += 50;
+                alert("🎉 Break Granted! Earned double Coffee Coins!");
+            } else {
+                alert("⚠️ Stress must be below 20% to grant a break!");
+            }
+            updateStats();
+        }
+    </script>
+</body>
+</html>
